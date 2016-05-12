@@ -1,6 +1,10 @@
-﻿using System.Web.Http;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Web.Http;
 using DryIoc;
 using DryIoc.WebApi;
+using DryIocWebapi.Sample.Controllers;
 using DryIocWebapi.Sample.Core.Repositories;
 using DryIocWebapi.Sample.Core.Services;
 
@@ -12,7 +16,7 @@ namespace DryIocWebapi.Sample
         {
             // Web API configuration and services
             var c = new Container()
-                .With(rules => rules.With(propertiesAndFields: PropertiesAndFields.Auto))
+                .With(rules => rules.With(propertiesAndFields: DeclaredPublicProperties))
                 .WithWebApi(config, throwIfUnresolved: type => type.IsController());
 
             c.Register<IWidgetRepository, WidgetRepository>(Reuse.Singleton);
@@ -26,6 +30,13 @@ namespace DryIocWebapi.Sample
                 routeTemplate: "api/{controller}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
+        }
+
+        private static IEnumerable<PropertyOrFieldServiceInfo> DeclaredPublicProperties(Request request)
+        {
+            return (request.ImplementationType ?? request.ServiceType).GetTypeInfo()
+                .DeclaredProperties.Where(p => p.IsInjectable())
+                .Select(PropertyOrFieldServiceInfo.Of);
         }
     }
 }
